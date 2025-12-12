@@ -94,13 +94,25 @@ local additional_perks = {
 		id = "NLD_SUPER_SHIELD",
 		ui_name = "Super Shield",
 		ui_description = "Gives you a small unbreakable shield... that blocks both ways!",
-		ui_icon = "",
-		perk_icon = "",
+		ui_icon = "mods/nld_tweaks/files/perks/super_shield/ui.png",
+		perk_icon = "mods/nld_tweaks/files/perks/super_shield/perk.png",
 		stackable = false,
-		func = function() end,
-	} and nil,
-	{--support role, healing? tank damage?
-
+		usable_by_enemies = true,
+		func = function( perk, taker, perk_name )
+			local x,y = EntityGetTransform(taker)
+			EntityAddChild(taker, EntityLoad("mods/nld_tweaks/files/perks/super_shield/shield.xml", x, y))
+		end,
+		func_remove = function(taker)
+			for _, entity_id in ipairs(EntityGetAllChildren(taker) or {}) do
+				if EntityGetName(entity_id) == "nld_super_shield" then
+					EntityKill(entity_id)
+					return
+				end
+			end
+		end,
+	},
+	{-- 
+		id = "NLD_",
 	} and nil,
 }
 
@@ -111,11 +123,22 @@ end
 
 local multiplayer_perks = {
 	{-- picks 3 random perks from other players and grants them
-		id = "NLD_COPY_THREE_PERKS",
+		id = "NLD_COPY_ALLY_PERKS",
 		ui_name = "Copy Three Perks",
 		ui_description = "Copy three random perks from other players",
-
-	} and nil
+	} and nil,
+	{-- health lost is distributed to nearby allies (stacks increase the range)
+		id = "NLD_RECYCLE_HEALTH",
+	} and nil,
+	{-- a portion of damage taken by nearby allies is redirected to the perk holder (stacks increase the amount absorbed by the tanker)
+		id = "NLD_TANKER",
+	} and nil,
+	{-- when the player dies, their zombie is much stronger BUT it is hostile to all creatures
+		id = "NLD_BERSERKER",
+	} and nil,
+	{-- steals a perk from another player and spawns it and 2 random perks for the thief to pick from
+		id = "NLD_PILFER",
+	} and nil,
 }
 
 if ModIsEnabled("quant.ew") then

@@ -1,4 +1,3 @@
-
 ---Get held wand or 0
 ---@param entity_id entity_id
 ---@return entity_id
