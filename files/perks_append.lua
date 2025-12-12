@@ -127,7 +127,7 @@ local multiplayer_perks = {
 		ui_name = "Copy Three Perks",
 		ui_description = "Copy three random perks from other players",
 	} and nil,
-	{-- health lost is distributed to nearby allies (stacks increase the range)
+	{-- health lost is distributed to nearby allies as healing (stacks increase the range)
 		id = "NLD_RECYCLE_HEALTH",
 	} and nil,
 	{-- a portion of damage taken by nearby allies is redirected to the perk holder (stacks increase the amount absorbed by the tanker)
@@ -139,7 +139,20 @@ local multiplayer_perks = {
 	{-- steals a perk from another player and spawns it and 2 random perks for the thief to pick from
 		id = "NLD_PILFER",
 	} and nil,
+	{-- distributes effect, ingestion and stain statuses among nearby players, good and bad (timer is divided for non-stains)
+		id = "NLD_SHARE_STATUS",
+	} and nil,
+	{-- 
+		id = "NLD_",
+	} and nil,
 }
+--item idea: soul link, throw it at another player and your healthbars are combined and linked BUT when one of you has tinker the effect is shared
+--item idea: wormhole potion from terraria, item that lets you tp to another player of your choosing
+
+--make vampirism allow you to take a portion of a player's HP if you interact with them
+-- UNLESS they have slime/oil blood in which case you get sick, if gas blood you get gassy effect
+
+
 
 if ModIsEnabled("quant.ew") then
 	for _, perk in ipairs(multiplayer_perks) do
