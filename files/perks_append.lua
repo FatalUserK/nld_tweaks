@@ -204,6 +204,12 @@ local multiplayer_perks = {
 		ui_name = "Plot Contrivance",
 		ui_description = "The more main characters there are around you, the less likely consequences are to impact you!"
 	} and nil,
+	{-- if you walk up to and stand next to an enemy for a short period of time, you are temporarily polymorphed into it
+		id = "NLD_HOT_POLYTATO", --if you deceive a player into killing you, you get a boon and that get a malus (opposite of bonus)
+	} and nil,
+	{-- 
+		id = "NLD_",
+	} and nil,
 }
 --perk idea: make multiplayer perks have a custom outline? (like how One-Offs are green)
 --item idea: soul link, throw it at another player and your healthbars are combined and linked BUT when one of you has tinker the effect is shared
