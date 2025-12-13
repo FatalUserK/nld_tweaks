@@ -22,10 +22,10 @@ local modifications = {
 			SetRandomSeed(perk_x, perk_y)
 
 			mana_max = math.min(mana_max * Randomf(1.3, 1.5)  ,  mana_max + Random(100, 500)) + Random(100, 200)
-			mana_max = math.floor(math.min(mana_max, 50000))
+			mana_max = math.floor(math.min(mana_max, 50000)) --max of 50k
 
 			mana_charge = math.min(mana_charge * Randomf(1.2, 1.4)  ,  mana_charge + Random(80, 400)) + Random(60, 120)
-			mana_charge = math.floor(math.min(mana_charge, 20000))
+			mana_charge = math.floor(math.min(mana_charge, 20000)) --max of 20k
 
 			capacity = math.max(capacity - Random(1, 3) - math.floor(capacity*.1), 1) --remove 1-3 AND one more for every 10 slots it has
 
@@ -56,7 +56,7 @@ local modifications = {
 			end
 		end
 	},
-	EXTRA_SLOTS = { --buffed to make held wand guaranteed plus 3-4 slots, lesser buff also applies to all wands in 24px radius that arent held by player
+	EXTRA_SLOTS = { --buffed to make held wand guaranteed plus 3 slots, a lesser buff also applies to all wands in 24px radius that arent held by player
 		func = function(perk, taker, perk_name)
 			local x, y = EntityGetTransform(perk)
 			for i,entity_id in ipairs(EntityGetInRadiusWithTag(x, y, 24, "wand")) do
@@ -67,9 +67,9 @@ local modifications = {
 					local always_casts = full_capacity - capacity
 
 					local increase
-					if entity_id == GetHeldWand(taker) then increase = Random(3,4) --if held wand, increase by 3
-					elseif EntityGetRootEntity(entity_id) == taker then increase = Random(1,4) --if in player's inventory, increase by 1-3
-					else increase = Random(0, 3) end --if not in player inventory, increase by 1-2
+					if entity_id == GetHeldWand(taker) then increase = 3 --if held wand, increase by 3
+					elseif EntityGetRootEntity(entity_id) == taker then increase = Random(1,3) --if in player's inventory, increase by 1-3
+					else increase = Random(1, 2) end --if not in player inventory, increase by 1-2
 
 					capacity = math.min(capacity + increase, math.max(25, capacity))
 					ComponentObjectSetValue2(ability_comp, "gun_config", "deck_capacity", capacity + always_casts)
@@ -121,64 +121,88 @@ for _, perk in ipairs(additional_perks) do
 end
 
 
+
+local multiplayer_modifications = {
+
+}
+
+
 local multiplayer_perks = {
 	{-- picks 2 random perks from other players and grants them
 		id = "NLD_COPY_ALLY_PERKS",
 		ui_name = "Copy Two Perks",
 		ui_description = "Copy two random perks from other players",
 	} and nil,
-	{-- health lost is distributed to nearby allies as healing (stacks increase the range)
+	{-- health lost is distributed to nearby allies as healing (stacks increase the range (and efficacy?))
 		id = "NLD_RECYCLE_HEALTH",
 		ui_name = "Recycle Health",
-		ui_description = "Lost HP is recycled as healing for a nearby ally"
+		ui_description = "Lost HP is recycled as healing for a nearby ally",
 	} and nil,
-	{-- a portion of damage taken by nearby allies is redirected to the perk holder (stacks increase the amount absorbed by the tanker)
+	{-- a portion of damage taken by nearby allies is redirected to the perk holder (second stack increases to 50%)
 		id = "NLD_TANKER",
-		ui_name = "",
-		ui_description = "",
+		ui_name = "Team Tank",
+		ui_description = "25% of damage taken by nearby allies is decreased by half and redirected to you",
 	} and nil,
 	{-- when the player dies, their zombie is much stronger BUT it is hostile to all creatures
 		id = "NLD_BERSERKER",
-		ui_name = "",
-		ui_description = "",
+		ui_name = "Restless Spirit",
+		ui_description = "On death, your zombie will be much stronger and behave more aggressively to those around it",
 	} and nil,
 	{-- steals a random stackable perk from another player and spawns three of it
 		id = "NLD_PILFER",
 		ui_name = "Pilfer",
 		ui_description = "Steal a stackable perk from a random player and spawn two more copies",
 	} and nil,
-	{-- distributes effect, ingestion and stain statuses among nearby players, good and bad (timer is divided for non-stains) (might exclude stains)
+	{-- inflicted satuses have a 1/[#nearby_players] chance to apply the status to all nearby players and otherwise nullify the effect
 		id = "NLD_SHARE_STATUS",
-		ui_name = "",
-		ui_description = "",
+		ui_name = "All or Nothing",
+		ui_description = "Status Effects inflicted on you are spread between you and nearby allies evenly",
 	} and nil,
 	{-- connect to nearby players and combines the mana pool and regeneration rate of actively held wands plus buffs both by 20% (link is obstructed by terrain)
-		id = "NLD_MANA_LINK", --the link chains, linking any connected player to any unconnected player if the distance between them is sufficient
+		id = "NLD_MANA_CHAIN", --the link chains, linking any connected player to any unconnected player if the distance between them is sufficient
 		ui_name = "Mana Pool", --displays the pooled mana as a bar at the bottom centre of the screen
 		ui_description = "Creates a magic chain between nearby allies pooling their mana and increasing efficiency",
 	} and nil,
 	{-- might scrap on the grounds friendly fire simply punishes people with bad aim (which just feels bad for everyone)
 		id = "NLD_FRIENDLY_FIRE", --and limits wand building options in an environment where resources are already spread pretty thin
-		ui_name = "Friendly Fire",
-		ui_description = "All players' spells can now hurt one another, but increase everyone's HP by 30%"
+		ui_name = "Friendly Fire", --maybe give passive healing? idk still sounds potentially unfun and bad
+		ui_description = "All players' spells can now hurt one another, but increase everyone's HP by 80%"
 	} and nil,
-	{-- steal 15% of all other players' HP and grants it doubled to a random player 
+	{-- steal 20% of all players' HP and grants it tripled to a random player (30% if there are two or less players)
 		id = "NLD_HP_ROULETTE",
+		ui_name = "Healthy Gambit",
+		ui_description = "20% of Max Health is taken from all players and granted three times over to a random player",
 	} and nil,
 	{-- strengthens the psychic shield you grant to other players on death, allows you to grant it while still alive
-		id = "NLD_BUFF_PSYCHIC_SHIELD"
+		id = "NLD_BUFF_PSYCHIC_SHIELD",
+		ui_name = "Strengthen Psychic Shield",
+		ui_description = "Makes the Psychic Shield you grant to others tougher and no longer require you to die"
 	} and nil,
-	{-- 10% of gold from expired nuggets is added to your wallet, but so is 10% of gold from gold nuggets that are picked up by other players
+	{-- 10% of gold from nearby expired nuggets is added to your wallet, but so is 10% of gold from gold nuggets that are picked up by other players anywhere
 		id = "NLD_PASSIVE_INCOME",
+		ui_name = "Passive Income",
+		ui_description = "10% of gold from nearby expired Gold Nuggets or those picked up by allies is transferred to you",
 	} and nil,
 	{-- when spectating another player, allows you to hover your mouse over an enemy to freeze it in place
 		id = "NLD_DIVINE_GLARE",
+		ui_name = "Divine Glare",
+		ui_description = "Allows you to inflict a fear status on a focused enemy when observing your peers",
 	} and nil,
 	{-- lose Psychic Shield on death but gain freecam
-		id = "NLD_"
+		id = "NLD_OMNISCIENT_VIEWER",
+		ui_name = "Omniscient Spectator's Viewpoint",
+		ui_description = "Loses Psychic Shield on death but you are able to project your mind to wherever it may wander",
 	} and nil,
-	{-- something something chain that increases range relative to max HP of the players? (may scrap)
-		id = "NLD_CHAINED_TOGETHER"
+	{-- something something chain that increases range relative to max HP of the players? idk it needs a positive boon (may scrap)
+		id = "NLD_CHAINED_TOGETHER",
+	} and nil,
+	{-- copy 5 perks? but every time you die you lose one
+		id = "NLD_BORROW_PERKS",
+	} and nil,
+	{-- adds a chance to dodge (nullify) any attack with a (#nearby_players-1)/(#total_players-1) * .5 chance (for every nearby player, chance increases, up to 50%)
+		id = "NLD_PLOT_CONTRIVANCE",
+		ui_name = "Plot Contrivance",
+		ui_description = "The more main characters there are around you, the less likely consequences are to impact you!"
 	} and nil,
 }
 --perk idea: make multiplayer perks have a custom outline? (like how One-Offs are green)
