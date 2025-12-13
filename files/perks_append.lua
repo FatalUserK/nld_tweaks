@@ -56,7 +56,7 @@ local modifications = {
 			end
 		end
 	},
-	EXTRA_SLOTS = { --buffed to make held wand guaranteed +3 slots, lesser buff also applies to all wands in 24px radius that arent held by player
+	EXTRA_SLOTS = { --buffed to make held wand guaranteed plus 3-4 slots, lesser buff also applies to all wands in 24px radius that arent held by player
 		func = function(perk, taker, perk_name)
 			local x, y = EntityGetTransform(perk)
 			for i,entity_id in ipairs(EntityGetInRadiusWithTag(x, y, 24, "wand")) do
@@ -67,9 +67,9 @@ local modifications = {
 					local always_casts = full_capacity - capacity
 
 					local increase
-					if entity_id == GetHeldWand(taker) then increase = 3 --if held wand, increase by 3
-					elseif EntityGetRootEntity(entity_id) == taker then increase = Random(1, 3) --if in player's inventory, increase by 1-3
-					else increase = Random(1, 2) end --if not in player inventory, increase by 1-2
+					if entity_id == GetHeldWand(taker) then increase = Random(3,4) --if held wand, increase by 3
+					elseif EntityGetRootEntity(entity_id) == taker then increase = Random(1,4) --if in player's inventory, increase by 1-3
+					else increase = Random(0, 3) end --if not in player inventory, increase by 1-2
 
 					capacity = math.min(capacity + increase, math.max(25, capacity))
 					ComponentObjectSetValue2(ability_comp, "gun_config", "deck_capacity", capacity + always_casts)
@@ -122,32 +122,71 @@ end
 
 
 local multiplayer_perks = {
-	{-- picks 3 random perks from other players and grants them
+	{-- picks 2 random perks from other players and grants them
 		id = "NLD_COPY_ALLY_PERKS",
-		ui_name = "Copy Three Perks",
-		ui_description = "Copy three random perks from other players",
+		ui_name = "Copy Two Perks",
+		ui_description = "Copy two random perks from other players",
 	} and nil,
 	{-- health lost is distributed to nearby allies as healing (stacks increase the range)
 		id = "NLD_RECYCLE_HEALTH",
+		ui_name = "Recycle Health",
+		ui_description = "Lost HP is recycled as healing for a nearby ally"
 	} and nil,
 	{-- a portion of damage taken by nearby allies is redirected to the perk holder (stacks increase the amount absorbed by the tanker)
 		id = "NLD_TANKER",
+		ui_name = "",
+		ui_description = "",
 	} and nil,
 	{-- when the player dies, their zombie is much stronger BUT it is hostile to all creatures
 		id = "NLD_BERSERKER",
+		ui_name = "",
+		ui_description = "",
 	} and nil,
-	{-- steals a perk from another player and spawns it and 2 random perks for the thief to pick from
+	{-- steals a random stackable perk from another player and spawns three of it
 		id = "NLD_PILFER",
+		ui_name = "Pilfer",
+		ui_description = "Steal a stackable perk from a random player and spawn two more copies",
 	} and nil,
-	{-- distributes effect, ingestion and stain statuses among nearby players, good and bad (timer is divided for non-stains)
+	{-- distributes effect, ingestion and stain statuses among nearby players, good and bad (timer is divided for non-stains) (might exclude stains)
 		id = "NLD_SHARE_STATUS",
+		ui_name = "",
+		ui_description = "",
 	} and nil,
-	{-- 
-		id = "NLD_",
+	{-- connect to nearby players and combines the mana pool and regeneration rate of actively held wands plus buffs both by 20% (link is obstructed by terrain)
+		id = "NLD_MANA_LINK", --the link chains, linking any connected player to any unconnected player if the distance between them is sufficient
+		ui_name = "Mana Pool", --displays the pooled mana as a bar at the bottom centre of the screen
+		ui_description = "Creates a magic chain between nearby allies pooling their mana and increasing efficiency",
+	} and nil,
+	{-- might scrap on the grounds friendly fire simply punishes people with bad aim (which just feels bad for everyone)
+		id = "NLD_FRIENDLY_FIRE", --and limits wand building options in an environment where resources are already spread pretty thin
+		ui_name = "Friendly Fire",
+		ui_description = "All players' spells can now hurt one another, but increase everyone's HP by 30%"
+	} and nil,
+	{-- steal 15% of all other players' HP and grants it doubled to a random player 
+		id = "NLD_HP_ROULETTE",
+	} and nil,
+	{-- strengthens the psychic shield you grant to other players on death, allows you to grant it while still alive
+		id = "NLD_BUFF_PSYCHIC_SHIELD"
+	} and nil,
+	{-- 10% of gold from expired nuggets is added to your wallet, but so is 10% of gold from gold nuggets that are picked up by other players
+		id = "NLD_PASSIVE_INCOME",
+	} and nil,
+	{-- when spectating another player, allows you to hover your mouse over an enemy to freeze it in place
+		id = "NLD_DIVINE_GLARE",
+	} and nil,
+	{-- lose Psychic Shield on death but gain freecam
+		id = "NLD_"
+	} and nil,
+	{-- something something chain that increases range relative to max HP of the players? (may scrap)
+		id = "NLD_CHAINED_TOGETHER"
 	} and nil,
 }
+--perk idea: make multiplayer perks have a custom outline? (like how One-Offs are green)
 --item idea: soul link, throw it at another player and your healthbars are combined and linked BUT when one of you has tinker the effect is shared
---item idea: wormhole potion from terraria, item that lets you tp to another player of your choosing
+--item idea: wormhole potion from terraria, item that lets you tp to another player of your choosing (party gets one per holy mountain, can also be found on pedestals)
+--spell idea: cross the streams, makes it so if the projectile comes within close proximity of a different player's projectile, its damage is amplified
+--spell idea: player homing (thank you d2d)
+--spell idea: friendly fire spell that makes spells work on allies but doesnt change them working on yourself
 
 --make vampirism allow you to take a portion of a player's HP if you interact with them
 -- UNLESS they have slime/oil blood in which case you get sick, if gas blood you get gassy effect
