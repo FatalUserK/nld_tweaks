@@ -130,18 +130,53 @@ local multiplayer_modifications = {
 local multiplayer_perks = {
 	{-- picks 2 random perks from other players and grants them
 		id = "NLD_COPY_ALLY_PERKS",
-		ui_name = "Copy Two Perks",
-		ui_description = "Copy two random perks from other players",
+		ui_name = "Copy Three Perks",
+		ui_description = "Copy three random perks from other players but lose one of your own",
 	} and nil,
 	{-- health lost is distributed to nearby allies as healing (stacks increase the range (and efficacy?))
 		id = "NLD_RECYCLE_HEALTH",
 		ui_name = "Recycle Health",
-		ui_description = "Lost HP is recycled as healing for a nearby ally",
+		ui_description = "A portion of lost health is recycled as healing for a nearby ally",
+		stackable = true,
+		stackable_is_rare = true,
+		stackable_maximum = 3,
+		max_in_perk_pool = 3,
+		func = function(perk, taker, perk_name, number) --number is how many of this perk the target now owns
+
+			if number == 1 then
+				EntityAddComponent2(taker, "LuaComponent", {
+					script_damage_received = "mods/nld_tweaks/files/perks/recycle_health"
+				})
+				EntityAddComponent2(taker, "VariableStorageComponent", {
+					name = "nld_health_recycle",
+					value_float = .5,
+					value_int = 200,
+				})
+			else
+				local recycle_efficiency_comp
+				for _, varcomp in ipairs(EntityGetComponent(taker, "VariableStorageComponent") or {}) do
+					if ComponentGetValue2(varcomp, "name") == "nld_health_recycle" then
+						recycle_efficiency_comp = varcomp break
+					end
+				end
+
+				if recycle_efficiency_comp then
+					ComponentSetValue2(recycle_efficiency_comp, ComponentGetValue2(recycle_efficiency_comp, "value_float") + .25)
+					ComponentSetValue2(recycle_efficiency_comp, ComponentGetValue2(recycle_efficiency_comp, "value_int") + 150)
+				end
+			end
+		end
 	} and nil,
 	{-- a portion of damage taken by nearby allies is redirected to the perk holder (second stack increases to 50%)
 		id = "NLD_TANKER",
 		ui_name = "Team Tank",
 		ui_description = "25% of damage taken by nearby allies is decreased by half and redirected to you",
+		stackable = true,
+		stackable_is_rare = true,
+		max_in_perk_pool = 2,
+		func = function(perk, taker, perk_name, number)
+			
+		end
 	} and nil,
 	{-- when the player dies, their zombie is much stronger BUT it is hostile to all creatures
 		id = "NLD_BERSERKER",
@@ -151,17 +186,18 @@ local multiplayer_perks = {
 	{-- steals a random stackable perk from another player and spawns three of it
 		id = "NLD_PILFER",
 		ui_name = "Pilfer",
-		ui_description = "Steal a stackable perk from a random player and spawn two more copies",
+		ui_description = "Steal a random stackable perk from a random player and spawn two more copies",
 	} and nil,
 	{-- inflicted satuses have a 1/[#nearby_players] chance to apply the status to all nearby players and otherwise nullify the effect
 		id = "NLD_SHARE_STATUS",
-		ui_name = "All or Nothing",
-		ui_description = "Status Effects inflicted on you are spread between you and nearby allies evenly",
+		ui_name = "In It Together",
+		ui_description = "Chance to be afflicted by a status effect is greatly reduced per nearby allies, but will afflict everyone if triggered",
+		--subsequent stacks will decrease the chance for the effect to trigger further
 	} and nil,
 	{-- connect to nearby players and combines the mana pool and regeneration rate of actively held wands plus buffs both by 20% (link is obstructed by terrain)
 		id = "NLD_MANA_CHAIN", --the link chains, linking any connected player to any unconnected player if the distance between them is sufficient
 		ui_name = "Mana Pool", --displays the pooled mana as a bar at the bottom centre of the screen
-		ui_description = "Creates a magic chain between nearby allies pooling their mana and increasing efficiency",
+		ui_description = "Connects a magic chain linking nearby allies pooling your mana and increasing efficiency",
 	} and nil,
 	{-- might scrap on the grounds friendly fire simply punishes people with bad aim (which just feels bad for everyone)
 		id = "NLD_FRIENDLY_FIRE", --and limits wand building options in an environment where resources are already spread pretty thin
@@ -170,9 +206,69 @@ local multiplayer_perks = {
 	} and nil,
 	{-- steal 20% of all players' HP and grants it tripled to a random player (30% if there are two or less players)
 		id = "NLD_HP_ROULETTE",
-		ui_name = "Healthy Gambit",
-		ui_description = "20% of Max Health is taken from all players and granted three times over to a random player",
-	} and nil,
+		ui_name = "$nld_perk_hp_roulette",
+		ui_description = "All players wager a portion of their Max Health and the winner is granted the bet three-times over",
+		ui_icon = "data/ui_gfx/perk_icons/extra_hp.png",
+		perk_icon = "data/items_gfx/perks/extra_hp.png",
+		one_off_effect = true,
+		do_not_remove = true,
+		stackable = true,
+		--- TODO
+		--- when perk is taken, HP is immediately yoinked with a noticeable visual effect, players can dodge by being poly'd or smth
+		--- after wagers are collected, big spiritual gambling machines thunk in above the betters, jojo-stand style
+		--- they have flashing lights and carnival noises as they roll, it rolls 3 match for the target winner
+		--- 	if target winner is invalid when the animation ends (ie poly'd or smth), that player is removed as a better and their machine explodes
+		--- 	if the bet failed, the machines flash red and try again
+		--- 		if all machines are destroyed, print "A LOSER IS YOU" on every player's screen
+		func = function(perk, taker, perk_name)
+			if not EntityHasTag(taker, "player_unit") then return end --do this to only run func once
+			print("----- EXECUTING HEALTHY GAMBIT FUNC -----")
+			local players = EntityGetWithTag("ew_peer")
+			local betters = {}
+
+			local hp_steal_percent = #players > 2 and .2 or .3 --less than 3 players then increase wager to 30% to make it not worse extra-hp
+			local hp_jackpot_multiplier = 3
+
+			local maxhp_pool = 0
+			local hp_pool = 0
+			for _, player in ipairs(players) do
+				local peer_id
+				for _, varcomp in ipairs(EntityGetComponent(player, "VariableStorageComponent") or {}) do
+					if ComponentGetValue2(varcomp, "name") == "ew_peer_id" then peer_id = ComponentGetValue2(varcomp, "value_string") end
+				end
+				local dmc = EntityGetFirstComponent(player, "DamageModelComponent")
+				if dmc and peer_id then
+					print("identified better: " .. player)
+					betters[#betters+1] = peer_id --add to list of betters
+					local maxhp = ComponentGetValue2(dmc, "max_hp") --get available max health
+					local wagered_maxhp = maxhp * hp_steal_percent --get wager
+					maxhp_pool = maxhp_pool + wagered_maxhp --add wager to pool
+					print("deducting " .. wagered_maxhp .. " maxhp from the target")
+
+
+					local hp = ComponentGetValue2(dmc, "hp")
+					if maxhp < hp then --if maxhp decrease would consume HP, add it to the wager as change
+						hp_pool = hp_pool + (hp - maxhp)
+					end
+				end
+			end
+
+			CrossCall("nld_player_multiply_health", nil, 1-hp_steal_percent, nil) --remove wagered HP from all players
+
+			print("maxhp wager = " .. maxhp_pool)
+			if #betters ~= 0 then --if no betters were found then fucking never mind i guess
+				print("number of betters: 0" .. #betters)
+				local x,y = EntityGetTransform(perk)
+				SetRandomSeed(x,y)
+				local winner = betters[Random(1, #betters)] --pick winner
+				print("A WINNER IS PLAYER".. winner)
+
+				maxhp_pool = maxhp_pool * hp_jackpot_multiplier --increase maxhp_pool by jackpot multiplier
+				CrossCall("nld_player_modify_health", hp_pool, maxhp_pool, winner)
+			end
+			print("----- CONDLUDING HEALTHY GAMBIT FUNC -----")
+		end,
+	},
 	{-- strengthens the psychic shield you grant to other players on death, allows you to grant it while still alive
 		id = "NLD_BUFF_PSYCHIC_SHIELD",
 		ui_name = "Strengthen Psychic Shield",
@@ -203,9 +299,53 @@ local multiplayer_perks = {
 		id = "NLD_PLOT_CONTRIVANCE",
 		ui_name = "Plot Contrivance",
 		ui_description = "The more main characters there are around you, the less likely consequences are to impact you!"
+
 	} and nil,
 	{-- if you walk up to and stand next to an enemy for a short period of time, you are temporarily polymorphed into it
 		id = "NLD_HOT_POLYTATO", --if you deceive a player into killing you, you get a boon and that get a malus (opposite of bonus)
+		ui_name = "Hot Polytato",
+
+	} and nil,
+	{
+		id = "NLD_GOLD_SPLIT",
+		ui_name = "$nld_perk_gold_split",
+		ui_description = "$nld_perkdesc_gold_split",
+		ui_icon = "data/ui_gfx/perk_icons/extra_money.png",
+		perk_icon = "data/items_gfx/perks/extra_money.png",
+		one_off_effect = true,
+		do_not_remove = true,
+		stackable = true,
+		stackable_is_rare = true,
+		func = function(perk, taker, perk_name)
+			local players = EntityGetWithTag("ew_peer")
+			local combined_gold = 0
+			local valid_players = {} --do this in case for some reason someone doesnt have a wallet to prevent me from needing to constantly check
+			for _, player in ipairs(players) do
+				local wallet = EntityGetFirstComponent(player, "WalletComponent")
+				if wallet then
+					valid_players[#valid_players+1] = player
+					if ComponentGetValue2(wallet, "mHasReachedInf") then combined_gold = -1 break end --dont bother tallying up any more gold if its gonna be infinite anyway
+					combined_gold = combined_gold + ComponentGetValue2(wallet, "money")
+				end
+			end
+
+			if combined_gold == -1 then --if a player has infinite gold, give everyone else infinite gold
+				for _, player in ipairs(valid_players) do
+					ComponentSetValue2(EntityGetFirstComponent(player, "WalletComponent"), "mHasReachedInf", true)
+					return
+				end
+			end --im considering making this actually remove inf gold from whomever has it and consider it as 2.1bil, but also removing inf gold might be buggy idk test later
+
+			local gold_amount = math.ceil((combined_gold * 1.1) / #valid_players) --increase gold by 10%, divide between the number of targets, round up
+			for _, player in ipairs(valid_players) do
+				ComponentSetValue2(EntityGetFirstComponent(player, "WalletComponent"), "money", gold_amount)
+			end
+		end
+	},
+	{-- you become a bound spirit (similar to The Soul for The Forgotten in tboi)
+		id = "NLD_BOUND_SPIRIT",
+		ui_name = "Ritual of Binding",
+		ui_description = "Become an unkillable spirit that switches between players to be bound to",
 	} and nil,
 	{-- 
 		id = "NLD_",
@@ -221,10 +361,14 @@ local multiplayer_perks = {
 --make vampirism allow you to take a portion of a player's HP if you interact with them
 -- UNLESS they have slime/oil blood in which case you get sick, if gas blood you get gassy effect
 
-
+--mode idea: everyone starts in a different parallel world (implement a fork of Parallel Parity that enforces full mirroring) and have to power up to beat each other
+-- every world has a Kolmi, beating it spawns a permanent portal to every other player's PW Intro Cave (colours indicate which is which)
+-- pvp is enabled, respawning invokes a timer-based respawn system sending you back to your previous parallel world
+-- either have limited respawns or timer increases per-respawn and if a player reaches you while you are dead and interacts with you then you lose
 
 if ModIsEnabled("quant.ew") then
-	for _, perk in ipairs(multiplayer_perks) do
-		perk_list[perk_list+1] = perk
+	for _, perk in pairs(multiplayer_perks) do
+		perk_list[#perk_list+1] = perk
+		print(("ADDED PERK [%s]"):format(perk.id or "NULL_ID"))
 	end
 end
