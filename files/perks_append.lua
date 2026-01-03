@@ -145,7 +145,7 @@ local multiplayer_perks = {
 
 			if number == 1 then
 				EntityAddComponent2(taker, "LuaComponent", {
-					script_damage_received = "mods/nld_tweaks/files/perks/recycle_health"
+					script_damage_received = "mods/nld_tweaks/files/perks/recycle_health.lua"
 				})
 				EntityAddComponent2(taker, "VariableStorageComponent", {
 					name = "nld_health_recycle",
@@ -244,6 +244,7 @@ local multiplayer_perks = {
 					local wagered_maxhp = maxhp * hp_steal_percent --get wager
 					maxhp_pool = maxhp_pool + wagered_maxhp --add wager to pool
 					print("deducting " .. wagered_maxhp .. " maxhp from the target")
+					ComponentSetValue2(dmc, "max_hp", maxhp - wagered_maxhp)
 
 
 					local hp = ComponentGetValue2(dmc, "hp")
@@ -252,8 +253,6 @@ local multiplayer_perks = {
 					end
 				end
 			end
-
-			CrossCall("nld_player_multiply_health", nil, 1-hp_steal_percent, nil) --remove wagered HP from all players
 
 			print("maxhp wager = " .. maxhp_pool)
 			if #betters ~= 0 then --if no betters were found then fucking never mind i guess
@@ -264,7 +263,11 @@ local multiplayer_perks = {
 				print("A WINNER IS PLAYER".. winner)
 
 				maxhp_pool = maxhp_pool * hp_jackpot_multiplier --increase maxhp_pool by jackpot multiplier
-				CrossCall("nld_player_modify_health", hp_pool, maxhp_pool, winner)
+				
+				local dmc = EntityGetFirstComponent(winner, "DamageModelComponent")
+				if not dmc then return end
+				ComponentSetValue2(dmc, "max_hp", ComponentGetValue2(dmc, "max_hp") + maxhp_pool)
+				ComponentSetValue2(dmc, "hp", ComponentGetValue2(dmc, "hp") + hp_pool)
 			end
 			print("----- CONDLUDING HEALTHY GAMBIT FUNC -----")
 		end,
@@ -346,7 +349,7 @@ local multiplayer_perks = {
 		id = "NLD_BOUND_SPIRIT",
 		ui_name = "Ritual of Binding",
 		ui_description = "Become an unkillable spirit that switches between players to be bound to",
-	} and nil,
+	} and nil, --add unique interaction wherein if you are already Linked to a player via the HP link item, you are stuck to them specifically but are strengthened
 	{-- 
 		id = "NLD_",
 	} and nil,

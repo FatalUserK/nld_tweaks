@@ -47,10 +47,22 @@ rpc.players_modify_health = function(hp, maxhp, target)
 	end
 end
 
-util.add_cross_call("nld_player_multiply_health", function(hp, maxhp)
-	rpc.players_multiply_health(hp, maxhp)
+
+util.add_cross_call("nld_player_multiply_health", function(hp, maxhp, target)
+	rpc.players_multiply_health(hp, maxhp, target)
 end)
 
-util.add_cross_call("nld_player_modify_health", function(hp, maxhp)
-	rpc.players_modify_health(hp, maxhp)
+util.add_cross_call("nld_player_modify_health", function(hp, maxhp, target)
+	rpc.players_modify_health(hp, maxhp, target)
+end)
+
+
+
+rpc.PRINT_TEST = function(str)
+	print("[" .. tostring(EntityGetClosestWithTag(0, 0 , "player_unit")) .. "]: " .. str)
+end
+
+util.add_cross_call("TEST", function(str)
+	print("a")
+	rpc.PRINT_TEST(str)
 end)
