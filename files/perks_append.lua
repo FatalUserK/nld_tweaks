@@ -224,52 +224,7 @@ local multiplayer_perks = {
 			if not EntityHasTag(taker, "player_unit") then return end --do this to only run func once
 			print("----- EXECUTING HEALTHY GAMBIT FUNC -----")
 			local players = EntityGetWithTag("ew_peer")
-			local betters = {}
 
-			local hp_steal_percent = #players > 2 and .2 or .3 --less than 3 players then increase wager to 30% to make it not worse extra-hp
-			local hp_jackpot_multiplier = 3
-
-			local maxhp_pool = 0
-			local hp_pool = 0
-			for _, player in ipairs(players) do
-				local peer_id
-				for _, varcomp in ipairs(EntityGetComponent(player, "VariableStorageComponent") or {}) do
-					if ComponentGetValue2(varcomp, "name") == "ew_peer_id" then peer_id = ComponentGetValue2(varcomp, "value_string") end
-				end
-				local dmc = EntityGetFirstComponent(player, "DamageModelComponent")
-				if dmc and peer_id then
-					print("identified better: " .. player)
-					betters[#betters+1] = peer_id --add to list of betters
-					local maxhp = ComponentGetValue2(dmc, "max_hp") --get available max health
-					local wagered_maxhp = maxhp * hp_steal_percent --get wager
-					maxhp_pool = maxhp_pool + wagered_maxhp --add wager to pool
-					print("deducting " .. wagered_maxhp .. " maxhp from the target")
-					ComponentSetValue2(dmc, "max_hp", maxhp - wagered_maxhp)
-
-
-					local hp = ComponentGetValue2(dmc, "hp")
-					if maxhp < hp then --if maxhp decrease would consume HP, add it to the wager as change
-						hp_pool = hp_pool + (hp - maxhp)
-					end
-				end
-			end
-
-			print("maxhp wager = " .. maxhp_pool)
-			if #betters ~= 0 then --if no betters were found then fucking never mind i guess
-				print("number of betters: 0" .. #betters)
-				local x,y = EntityGetTransform(perk)
-				SetRandomSeed(x,y)
-				local winner = betters[Random(1, #betters)] --pick winner
-				print("A WINNER IS PLAYER".. winner)
-
-				maxhp_pool = maxhp_pool * hp_jackpot_multiplier --increase maxhp_pool by jackpot multiplier
-				
-				local dmc = EntityGetFirstComponent(winner, "DamageModelComponent")
-				if not dmc then return end
-				ComponentSetValue2(dmc, "max_hp", ComponentGetValue2(dmc, "max_hp") + maxhp_pool)
-				ComponentSetValue2(dmc, "hp", ComponentGetValue2(dmc, "hp") + hp_pool)
-			end
-			print("----- CONDLUDING HEALTHY GAMBIT FUNC -----")
 		end,
 	},
 	{-- strengthens the psychic shield you grant to other players on death, allows you to grant it while still alive
@@ -287,7 +242,7 @@ local multiplayer_perks = {
 		ui_name = "Divine Glare",
 		ui_description = "Allows you to inflict a fear status on a focused enemy when observing your peers",
 	} and nil,
-	{-- lose Psychic Shield on death but gain freecam
+	{-- lose Psychic Shield on death but gain freecam (may scrap, could cause issues with chunk loading maybe?)
 		id = "NLD_OMNISCIENT_VIEWER",
 		ui_name = "Omniscient Spectator's Viewpoint",
 		ui_description = "Loses Psychic Shield on death but you are able to project your mind to wherever it may wander",
@@ -305,13 +260,13 @@ local multiplayer_perks = {
 
 	} and nil,
 	{-- if you walk up to and stand next to an enemy for a short period of time, you are temporarily polymorphed into it
-		id = "NLD_HOT_POLYTATO", --if you deceive a player into killing you, you get a boon and that get a malus (opposite of bonus)
+		id = "NLD_HOT_POLYTATO", --if you deceive a player into killing you, you get a boon and that get a malus
 		ui_name = "Hot Polytato",
 
 	} and nil,
-	{
+	{--pools everyone's gold together, increases it by 10%, and distributes it evenly between everyone
 		id = "NLD_GOLD_SPLIT",
-		ui_name = "$nld_perk_gold_split",
+		ui_name = "$nld_perk_gold_split", --Great Economic Equaliser
 		ui_description = "$nld_perkdesc_gold_split",
 		ui_icon = "data/ui_gfx/perk_icons/extra_money.png",
 		perk_icon = "data/items_gfx/perks/extra_money.png",
