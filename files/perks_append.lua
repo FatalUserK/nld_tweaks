@@ -184,7 +184,7 @@ local multiplayer_perks = {
 		ui_description = "On death, your zombie will be much stronger and behave more aggressively to those around it",
 	} and nil,
 	{-- steals a random stackable perk from another player and spawns three of it
-		id = "NLD_PILFER",
+		id = "NLD_PILFER", --the copies cannot be picked up by other players? indicate by particle effects of the player they belong to?
 		ui_name = "Pilfer",
 		ui_description = "Steal a random stackable perk from a random player and spawn two more copies",
 	} and nil,
