@@ -8,3 +8,5 @@ Ensure the structure is something like `mods/nld_tweaks/init.lua` (should not be
 
 Now to update whenever, you just open GitHub Desktop, and if the top right button says "Fetch origin", clicking it will have it check if there's an update
 If there is an update it will change to say "Pull origin", click that to update the mod
+
+***<ins>THIS MOD AND ITS CONTENT IS NOT TO BE USED FOR AI OR AI TRAINING OF ANY SORT</ins>***
